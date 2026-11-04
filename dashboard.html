@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NebulaVPN — Личный кабинет</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0e1a; --card: #161f2e; --accent: #6c5ce7; --accent2: #00d4ff;
+    --text: #e6edf7; --muted: #8899b0; --border: #1f2a3d; --success: #00e676;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh;
+  }
+  nav {
+    padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border); background: rgba(10,14,26,0.8);
+  }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); font-weight: 800; font-size: 20px;}
+  .logo span { background: linear-gradient(90deg, var(--accent2), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .btn-out { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+  .btn-out:hover { border-color: #ff4d4d; color: #ff4d4d; }
+
+  .container { flex: 1; padding: 30px 20px; max-width: 500px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+  .user-info { text-align: center; }
+  .user-info p { color: var(--muted); font-size: 14px; }
+  .user-info h2 { font-size: 20px; margin-top: 4px; color: var(--accent2); }
+
+  .power-wrap { position: relative; margin: 20px 0; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+  .power-btn {
+    width: 180px; height: 180px; border-radius: 50%;
+    background: var(--card); border: 4px solid var(--border);
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; transition: all .3s; position: relative; overflow: hidden;
+  }
+  .power-btn::before {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle, rgba(108,92,231,.2), transparent 70%); opacity: 0; transition: .3s;
+  }
+  .power-btn svg { width: 60px; height: 60px; fill: var(--muted); transition: all .3s; z-index: 2; }
+  
+  .power-btn.connected { border-color: var(--success); }
+  .power-btn.connected svg { fill: var(--success); }
+  .power-btn.connected::before { opacity: 1; background: radial-gradient(circle, rgba(0,230,118,.2), transparent 70%); animation: pulse 2s infinite; }
+  .power-btn.connected { animation: glow 2s infinite; }
+  
+  @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(0,230,118,0.2); } 50% { box-shadow: 0 0 50px rgba(0,230,118,0.5); } }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+  .status-text { font-size: 18px; font-weight: 700; letter-spacing: .5px; transition: 0.3s; }
+  .status-text.connected { color: var(--success); }
+
+  .servers { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: none; opacity: 0; transition: opacity .5s; }
+  .servers.show { display: block; opacity: 1; }
+  .servers h3 { font-size: 13px; margin-bottom: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .server-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px; border-radius: 10px; cursor: pointer; transition: .2s; border: 1px solid transparent; margin-bottom: 8px;
+  }
+  .server-item:last-child { margin-bottom: 0; }
+  .server-item:hover { background: rgba(255,255,255,0.05); }
+  .server-item.active { background: rgba(0,212,255,0.1); border-color: var(--accent2); }
+  .server-name { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+  .ping { color: var(--success); font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">🌌 <span>NebulaVPN</span></a>
+  <button class="btn-out" onclick="logout()">Выйти</button>
+</nav>
+
+<div class="container">
+  <div class="user-info">
+    <p>Добро пожаловать,</p>
+    <h2 id="user-email">Загрузка...</h2>
+  </div>
+
+  <div class="power-wrap">
+    <div class="power-btn" id="power-btn" onclick="toggleConnect()">
+      <svg viewBox="0 0 24 24"><path d="M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M11,3V13H13V3H11Z" /></svg>
+    </div>
+    <div class="status-text" id="status-text">Не подключено</div>
+  </div>
+
+  <div class="servers" id="servers">
+    <h3>Выберите сервер</h3>
+    <div class="server-item active" onclick="selectServer(this, '🇳🇱 Нидерланды')">
+      <div class="server-name">🇳🇱 Нидерланды</div>
+      <div class="ping">24 ms</div>
+    </div>
+    <div class="server-item" onclick="selectServer(this, '🇩🇪 Германия')">
+      <div class="server-name">🇩🇪 Германия</div>
+      <div class="ping">45 ms</div>
+    </div>
+    <div class="server-item" onclick="selectServer(this, '🇺🇸 США')">
+      <div class="server-name">🇺🇸 США</div>
+      <div class="ping">120 ms</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const email = localStorage.getItem('userEmail');
+  if (!email) {
+    window.location.href = 'index.html';
+  } else {
+    document.getElementById('user-email').textContent = email;
+  }
+
+  let isConnected = false;
+  let currentServer = 'Нидерланды';
+
+  function toggleConnect() {
+    const btn = document.getElementById('power-btn');
+    const txt = document.getElementById('status-text');
+    const srvBox = document.getElementById('servers');
+
+    isConnected = !isConnected;
+
+    if (isConnected) {
+      btn.classList.add('connected');
+      txt.classList.add('connected');
+      txt.textContent = 'Подключено: ' + currentServer;
+      srvBox.classList.add('show');
+    } else {
+      btn.classList.remove('connected');
+      txt.classList.remove('connected');
+      txt.textContent = 'Не подключено';
+      srvBox.classList.remove('show');
+    }
+  }
+
+  function selectServer(el, name) {
+    document.querySelectorAll('.server-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    currentServer = name.split(' ')[1];
+    
+    if (isConnected) {
+      const txt = document.getElementById('status-text');
+      txt.textContent = 'Переподключение...';
+      setTimeout(() => {
+        txt.textContent = 'Подключено: ' + currentServer;
+      }, 800);
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('userEmail');
+    window.location.href = 'index.html';
+  }
+</script>
+</body>
+  </html>
